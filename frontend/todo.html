@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Todo App</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-inner">
+      <span class="header-logo">📋 <span class="logo-text">TodoApp</span></span>
+      <div class="header-right">
+        <span id="username"></span>
+        <button class="btn-logout" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="card">
+    <h2 class="card-title">Tugas Hari Ini</h2>
+    <p class="card-sub">Kelola todo kamu dengan mudah dan cepat.</p>
+
+    <!-- Input -->
+    <div class="input-row">
+      <input id="title" type="text" placeholder="Tulis todo baru..." autocomplete="off" />
+      <button class="btn-add" onclick="addTodo()">+ Tambah</button>
+    </div>
+
+    <!-- Filter -->
+    <div class="filter-row">
+      <button class="filter-btn active-all" onclick="setFilter('all')" id="f-all">Semua</button>
+      <button class="filter-btn" onclick="setFilter('done')" id="f-done">✓ Selesai</button>
+      <button class="filter-btn" onclick="setFilter('undone')" id="f-undone">⏳ Belum</button>
+    </div>
+
+    <!-- List -->
+    <ul id="todoList"></ul>
+  </div>
+
+  <script>
+
+    function getUserFromToken() {
+      const token = localStorage.getItem("token");
+      if (!token) return null;
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      return payload.nama;
+    }
+
+    // tampilkan di header
+    const username = getUserFromToken();
+    document.getElementById("username").innerText = username;
+
+    const API = "http://localhost:3000";
+    const token = localStorage.getItem("token");
+
+    // kalau tidak ada token → balik ke login
+    if (!token) {
+        window.location.href = "login.html";
+    }
+
+    let currentFilter = "all";
+
+    function setFilter(filter) {
+        currentFilter = filter;
+        document.getElementById("f-all").className    = "filter-btn";
+        document.getElementById("f-done").className   = "filter-btn";
+        document.getElementById("f-undone").className = "filter-btn";
+        if (filter === "all")    document.getElementById("f-all").classList.add("active-all");
+        if (filter === "done")   document.getElementById("f-done").classList.add("active-done");
+        if (filter === "undone") document.getElementById("f-undone").classList.add("active-undone");
+        getTodos();
+    }
+
+    // ambil todos
+    async function getTodos() {
+      const res = await fetch(API + "/todos", {
+        headers: {
+          Authorization: "Bearer " + token
+        }
+      });
+
+      const data = await res.json();
+      const list = document.getElementById("todoList");
+      list.innerHTML = "";
+
+      const filtered = data.filter(todo => {
+        if (currentFilter === "done"   && todo.is_done != 1) return false;
+        if (currentFilter === "undone" && todo.is_done != 0) return false;
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        list.innerHTML = `<div class="empty-state"><div class="icon">📋</div><p>Tidak ada todo di sini.</p></div>`;
+        return;
+      }
+
+      filtered.forEach(todo => {
+        list.innerHTML += `
+  <li>
+    <div class="todo-main">
+      <div class="todo-left">
+        <input type="checkbox" class="todo-check"
+          ${todo.is_done ? "checked" : ""}
+          onchange="toggleTodo(${todo.id})" />
+        <span id="text-${todo.id}" class="todo-text ${todo.is_done ? 'done' : ''}">
+          ${todo.title}
+        </span>
+      </div>
+      <div class="todo-actions">
+        <button class="btn-edit" onclick="showEdit(${todo.id})">Edit</button>
+        <button class="btn-delete" onclick="deleteTodo(${todo.id})">Hapus</button>
+      </div>
+    </div>
+    <div id="edit-${todo.id}" class="edit-box hidden">
+      <input id="input-${todo.id}" class="edit-input" type="text" />
+      <button class="btn-save" onclick="updateTodo(${todo.id})">Simpan</button>
+    </div>
+  </li>`;
+      });
+    }
+
+    function showEdit(id) {
+      const editBox = document.getElementById("edit-" + id);
+      const text = document.getElementById("text-" + id).innerText;
+      editBox.classList.toggle("hidden");
+      document.getElementById("input-" + id).value = text;
+    }
+
+    // 🔥 tambah todo
+    async function addTodo() {
+      const title = document.getElementById("title").value;
+
+      await fetch(API + "/todos", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + token
+        },
+        body: JSON.stringify({ title })
+      });
+
+      document.getElementById("title").value = "";
+      getTodos();
+    }
+
+    // update todo
+    async function updateTodo(id) {
+      const title = document.getElementById("input-" + id).value;
+
+      await fetch(API + "/todos/" + id, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + token
+        },
+        body: JSON.stringify({ title })
+      });
+
+      getTodos(); // refresh
+    }
+
+    // 🔥 delete todo
+    async function deleteTodo(id) {
+      await fetch(API + "/todos/" + id, {
+        method: "DELETE",
+        headers: {
+          Authorization: "Bearer " + token
+        }
+      });
+
+      getTodos();
+    }
+
+    async function toggleTodo(id) {
+      await fetch(API + "/todos/" + id + "/toggle", {
+        method: "PATCH",
+        headers: {
+          Authorization: "Bearer " + token
+        }
+      });
+
+      getTodos();
+    }
+
+    function logout() {
+      localStorage.removeItem("token");
+      window.location.href = "login.html";
+    }
+
+    // Input Enter shortcut
+    document.getElementById("title").addEventListener("keydown", e => {
+      if (e.key === "Enter") addTodo();
+    });
+
+    // load pertama
+    getTodos();
+  </script>
+
+</body>
+</html>

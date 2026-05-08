@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — TodoApp</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body { justify-content: center; align-items: center; padding: 0; }
+  </style>
+</head>
+<body>
+
+  <div class="auth-wrap">
+    <div class="auth-logo"> TodoApp</div>
+    <p class="auth-sub">Selamat datang kembali!</p>
+
+    <div class="auth-card">
+      <h2>Login</h2>
+
+      <div class="field">
+        <label>Nama</label>
+        <input id="nama" type="text" placeholder="Masukkan nama kamu" autocomplete="off" />
+      </div>
+
+      <div class="field">
+        <label>Password</label>
+        <input id="password" type="password" placeholder="Masukkan password" />
+      </div>
+
+      <button class="btn-submit" onclick="login()">Masuk</button>
+      <p id="message"></p>
+    </div>
+
+    <p class="auth-footer">
+      Belum punya akun? <a href="register.html">Register di sini</a>
+    </p>
+  </div>
+
+  <script>
+    const token = localStorage.getItem("token");
+
+    if (token) {
+        window.location.href = "todo.html";
+    }
+
+   async function register() {
+  const btn = document.getElementById("btnRegister");
+  btn.innerText = "Loading...";
+  btn.disabled = true;
+
+  const nama = document.getElementById("nama").value;
+  const password = document.getElementById("password").value;
+
+  try {
+    const res = await fetch("http://localhost:3000/auth/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ nama, password })
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      alert("Register berhasil!");
+      window.location.href = "login.html";
+    } else {
+      document.getElementById("message").innerText = data.message;
+    }
+
+  } catch (err) {
+    document.getElementById("message").innerText = "Server error";
+  }
+
+  btn.innerText = "Register";
+  btn.disabled = false;
+}
+
+    async function login() {
+      const nama = document.getElementById("nama").value;
+      const password = document.getElementById("password").value;
+
+      try {
+        const res = await fetch("http://localhost:3000/auth/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ nama, password })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          // simpan token
+          localStorage.setItem("token", data.token);
+
+          // pindah ke halaman todo
+          window.location.href = "todo.html";
+        } else {
+          document.getElementById("message").innerText = data.message;
+        }
+
+      } catch (err) {
+        document.getElementById("message").innerText = "Server error";
+      }
+    }
+
+    document.addEventListener("keydown", e => {
+      if (e.key === "Enter") login();
+    });
+  </script>
+
+</body>
+</html>
