@@ -1,0 +1,37 @@
+services:
+  # Database Service
+  db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_DATABASE: todolist_db
+      MYSQL_ROOT_PASSWORD: password_aman
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./todolist_db.sql:/docker-entrypoint-initdb.d/init.sql
+
+  # Backend Service
+  backend:
+    build: ./backend
+    restart: always
+    environment:
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=password_aman
+      - DB_NAME=todolist_db
+    depends_on:
+      - db
+    ports:
+      - "3000:3000" # Diubah dari 5000 ke 3000
+
+  # Frontend Service
+  frontend:
+    build: ./frontend
+    restart: always
+    ports:
+      - "81:80" # Diubah dari 80 ke 81 (Akses VPS via port 81)
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
