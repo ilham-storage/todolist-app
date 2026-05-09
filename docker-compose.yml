@@ -4,11 +4,11 @@ services:
     image: mysql:8.0
     restart: always
     environment:
-      MYSQL_DATABASE: todolist_db
+      MYSQL_DATABASE: todo_app
       MYSQL_ROOT_PASSWORD: password_aman
     volumes:
       - db_data:/var/lib/mysql
-      - ./todolist_db.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./todo_app.sql:/docker-entrypoint-initdb.d/init.sql
 
   # Backend Service
   backend:
@@ -18,7 +18,7 @@ services:
       - DB_HOST=db
       - DB_USER=root
       - DB_PASSWORD=password_aman
-      - DB_NAME=todolist_db
+      - DB_NAME=todo_app
     depends_on:
       - db
     ports:
